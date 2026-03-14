@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>emoji</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@100;200;300&family=Outfit:wght@200;300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #fff6ea;
+    --fg: #25d366;
+    --check-color: #34b7f1;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { height: 100%; width: 100%; }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 300;
+    background: linear-gradient(180deg, #fff6ea 0%, #ffffff 100%);
+    color: var(--fg);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  .container {
+    width: 100%;
+    max-width: 480px;
+    text-align: center;
+  }
+
+  .emoji-display {
+    font-size: 72px;
+    line-height: 1;
+    margin-bottom: 28px;
+  }
+  .emoji-display.pop { animation: pop 0.35s ease; }
+  @keyframes pop {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.18); }
+    100% { transform: scale(1); }
+  }
+
+  .choices-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 480px) {
+    .choices-grid { grid-template-columns: 1fr; }
+  }
+
+  .choice-btn {
+    width: 100%;
+    padding: 14px 10px;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 300;
+    font-size: 15px;
+    letter-spacing: 0.06em;
+    background: transparent;
+    color: var(--fg);
+    border: 1px solid rgba(37,211,102,0.4);
+    border-radius: 9px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    min-height: 52px;
+  }
+  .choice-btn:disabled { cursor: default; }
+  .choice-btn.selected {
+    background: transparent !important;
+    border: 1.8px solid var(--fg) !important;
+  }
+  .choice-btn.correct {
+    border: 2px solid var(--fg) !important;
+    background: rgba(37,211,102,0.12) !important;
+  }
+  .choice-btn.wrong {
+    border: 1px solid rgba(37,211,102,0.15) !important;
+    background: transparent !important;
+    opacity: 0.45;
+  }
+
+  .btn-answer {
+    width: 100%;
+    padding: 16px;
+    font-family: 'Noto Sans SC', sans-serif;
+    font-weight: 300;
+    font-size: 14px;
+    letter-spacing: 0.18em;
+    background: transparent;
+    color: var(--fg);
+    border: 1px solid rgba(37,211,102,0.45);
+    border-radius: 9px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .btn-answer:disabled { opacity: 0.6; cursor: default; }
+
+  .result-msg {
+    margin-top: 16px;
+    font-size: 14px;
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    min-height: 22px;
+    font-family: 'Noto Sans SC', sans-serif;
+  }
+
+  .btn-next {
+    margin-top: 14px;
+    width: 100%;
+    padding: 13px;
+    font-family: 'Noto Sans SC', sans-serif;
+    font-weight: 300;
+    font-size: 13px;
+    letter-spacing: 0.14em;
+    background: transparent;
+    color: var(--fg);
+    border: 1px solid rgba(37,211,102,0.45);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    display: none;
+  }
+  .btn-next:hover { background: rgba(37,211,102,0.12); }
+
+  .score-row {
+    font-size: 11px;
+    font-weight: 300;
+    letter-spacing: 0.08em;
+    color: var(--fg);
+    opacity: 0.6;
+    text-align: right;
+    font-family: 'Noto Sans SC', sans-serif;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="emoji-display" id="emoji">🤣</div>
+    <div class="choices-grid" id="choices"></div>
+    <button class="btn-answer" id="btnAnswer" disabled>answer</button>
+    <div class="result-msg" id="resultMsg"></div>
+    <button class="btn-next" id="btnNext">next →</button>
+    <div class="score-row" id="scoreRow">0 / 0</div>
+  </div>
+
+<script>
+const DATA = [
+  {emoji:'🤣', answer:'laughing'},
+  {emoji:'😅', answer:'awkward'},
+  {emoji:'🙂‍↕️', answer:'nodding'},
+  {emoji:'😢', answer:'sad'},
+  {emoji:'😱', answer:'shocked'},
+  {emoji:'🫣', answer:'shy'},
+  {emoji:'🤧', answer:'sneezing'},
+  {emoji:'😵‍💫', answer:'dizzy'},
+  {emoji:'😷', answer:'sick'},
+  {emoji:'🤑', answer:'greedy'},
+  {emoji:'😮‍💨', answer:'sigh'},
+  {emoji:'🥶', answer:'freezing'},
+  {emoji:'🤬', answer:'angry'},
+  {emoji:'🤔', answer:'thinking'},
+  {emoji:'😋', answer:'tasty'},
+  {emoji:'🫡', answer:'understood'},
+  {emoji:'🤫', answer:'shh'},
+  {emoji:'🫨', answer:'shaking'},
+  {emoji:'🙂‍↔️', answer:'disagree'},
+  {emoji:'😐', answer:'neutral'},
+  {emoji:'🥱', answer:'yawning'},
+  {emoji:'😴', answer:'sleepy'},
+  {emoji:'😰', answer:'anxious'},
+];
+const ALL_ANSWERS = DATA.map(d => d.answer);
+let queue=[], idx=0, selected=null, answered=false, score=0, total=0;
+
+function shuffle(a) {
+  for (let i=a.length-1; i>0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+function getChoices(correct) {
+  const others = shuffle(ALL_ANSWERS.filter(a=>a!==correct)).slice(0,2);
+  return shuffle([correct, ...others]);
+}
+function loadQuestion() {
+  if (idx >= queue.length) { queue = shuffle([...DATA]); idx = 0; }
+  const q = queue[idx++];
+  selected = null; answered = false;
+  const emojiEl = document.getElementById('emoji');
+  emojiEl.textContent = q.emoji;
+  emojiEl.classList.remove('pop');
+  void emojiEl.offsetWidth;
+  emojiEl.classList.add('pop');
+  const choices = getChoices(q.answer);
+  const cont = document.getElementById('choices');
+  cont.innerHTML = '';
+  choices.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.textContent = c;
+    btn.dataset.val = c;
+    btn.addEventListener('click', () => {
+      if (answered) return;
+      document.querySelectorAll('.choice-btn').forEach(b => b.classList.remove('selected'));
+      selected = c;
+      btn.classList.add('selected');
+      document.getElementById('btnAnswer').disabled = false;
+    });
+    cont.appendChild(btn);
+  });
+  document.getElementById('btnAnswer').disabled = true;
+  document.getElementById('resultMsg').textContent = '';
+  document.getElementById('btnNext').style.display = 'none';
+  window._currentAnswer = q.answer;
+}
+document.getElementById('btnAnswer').addEventListener('click', () => {
+  if (!selected || answered) return;
+  answered = true;
+  total++;
+  const correct = window._currentAnswer;
+  const isCorrect = selected === correct;
+  if (isCorrect) score++;
+  document.querySelectorAll('.choice-btn').forEach(btn => {
+    btn.disabled = true;
+    btn.classList.remove('selected');
+    if (btn.dataset.val === correct) btn.classList.add('correct');
+    else if (btn.dataset.val === selected && !isCorrect) btn.classList.add('wrong');
+  });
+  const msg = document.getElementById('resultMsg');
+  if (isCorrect) {
+    msg.innerHTML = '<span style="color:#34b7f1">✓✓</span> correct!';
+    msg.style.color = 'var(--fg)';
+  } else {
+    msg.textContent = '✗ try again';
+    msg.style.color = '#25d366';
+  }
+  document.getElementById('scoreRow').textContent = `${score} / ${total}`;
+  document.getElementById('btnAnswer').disabled = true;
+  document.getElementById('btnNext').style.display = 'block';
+});
+document.getElementById('btnNext').addEventListener('click', loadQuestion);
+queue = shuffle([...DATA]);
+loadQuestion();
+</script>
+</body>
+</html>
